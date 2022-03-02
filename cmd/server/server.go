@@ -1,16 +1,23 @@
 package server
 
 import (
+	"context"
 	"crypto/ed25519"
 	"encoding/hex"
 	"flag"
 	"fmt"
 
 	"github.com/libp2p/go-libp2p"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
+
 	// "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/peaqnetwork/peaq-network-ev-charging-sim-be-p2p/services"
 )
+
+// Subscription topic
+const TOPIC = "charmev"
 
 // Used for checks
 var localPeerID peer.ID
@@ -42,6 +49,17 @@ func Run() error {
 	localPeerID = h.ID()
 
 	fmt.Println(h.Addrs())
+
+	ctx := context.Background()
+
+	// create a new PubSub service using the GossipSub router
+	ps, err := pubsub.NewGossipSub(ctx, h)
+	if err != nil {
+		return err
+	}
+
+	// subscribe to the topic
+	services.Subscribe(ctx, ps, h.ID(), TOPIC)
 
 	return nil
 }

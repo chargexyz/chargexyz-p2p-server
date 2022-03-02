@@ -46,6 +46,7 @@ require (
 	github.com/libp2p/go-libp2p-noise v0.3.0 // indirect
 	github.com/libp2p/go-libp2p-peerstore v0.6.0 // indirect
 	github.com/libp2p/go-libp2p-pnet v0.2.0 // indirect
+	github.com/libp2p/go-libp2p-pubsub v0.6.1
 	github.com/libp2p/go-libp2p-quic-transport v0.15.2 // indirect
 	github.com/libp2p/go-libp2p-swarm v0.9.0 // indirect
 	github.com/libp2p/go-libp2p-tls v0.3.1 // indirect
@@ -114,5 +115,6 @@ require (
 	github.com/libp2p/zeroconf/v2 v2.1.1 // indirect
 	github.com/onsi/gomega v1.17.0 // indirect
 	github.com/rogpeppe/go-internal v1.8.1 // indirect
+	github.com/whyrusleeping/timecache v0.0.0-20160911033111-cfcb2f1abfee // indirect
 	google.golang.org/grpc v1.44.0 // indirect
 )
