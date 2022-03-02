@@ -1,11 +1,13 @@
 package server
 
 import (
+	"bufio"
 	"context"
 	"crypto/ed25519"
 	"encoding/hex"
 	"flag"
 	"fmt"
+	"os"
 
 	"github.com/libp2p/go-libp2p"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -13,11 +15,9 @@ import (
 	// "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
+	"github.com/peaqnetwork/peaq-network-ev-charging-sim-be-p2p/common"
 	"github.com/peaqnetwork/peaq-network-ev-charging-sim-be-p2p/services"
 )
-
-// Subscription topic
-const TOPIC = "charmev"
 
 // Used for checks
 var localPeerID peer.ID
@@ -48,8 +48,6 @@ func Run() error {
 
 	localPeerID = h.ID()
 
-	fmt.Println(h.Addrs())
-
 	ctx := context.Background()
 
 	// create a new PubSub service using the GossipSub router
@@ -58,10 +56,25 @@ func Run() error {
 		return err
 	}
 
-	// subscribe to the topic
-	services.Subscribe(ctx, ps, h.ID(), TOPIC)
+	// setup local mDNS discovery
+	if err := setupDiscovery(h); err != nil {
+		return err
+	}
 
-	return nil
+	// subscribe to the topic
+	services.Subscribe(ctx, ps, h.ID(), common.TOPIC)
+
+	fmt.Println(h.Addrs())
+	scanner := bufio.NewScanner(os.Stdin)
+
+	for {
+		fmt.Print("Write Message: ")
+		scanner.Scan()
+		sendData := scanner.Text()
+		fmt.Println("msg> ", sendData)
+
+	}
+
 }
 
 // Generates ED25519 private key
