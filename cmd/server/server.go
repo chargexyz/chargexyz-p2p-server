@@ -12,7 +12,6 @@ import (
 	"github.com/libp2p/go-libp2p"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 
-	// "github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/peaqnetwork/peaq-network-ev-charging-sim-be-p2p/common"
@@ -47,7 +46,6 @@ func Run() error {
 	}
 
 	localPeerID = h.ID()
-
 	ctx := context.Background()
 
 	// create a new PubSub service using the GossipSub router
@@ -62,9 +60,10 @@ func Run() error {
 	}
 
 	// subscribe to the topic
-	services.Subscribe(ctx, ps, h.ID(), common.TOPIC)
+	services.Subscribe(ctx, ps, localPeerID, common.TOPIC)
 
-	fmt.Println(h.Addrs())
+	fmt.Println("Local Peer ID", localPeerID)
+	fmt.Println("Listening on...", h.Addrs())
 	scanner := bufio.NewScanner(os.Stdin)
 
 	for {
@@ -72,7 +71,6 @@ func Run() error {
 		scanner.Scan()
 		sendData := scanner.Text()
 		fmt.Println("msg> ", sendData)
-
 	}
 
 }
