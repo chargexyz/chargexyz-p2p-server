@@ -1,8 +1,12 @@
 package services
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
+	"fmt"
+	"strings"
+	"time"
 
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -17,7 +21,7 @@ type Connection struct {
 	topic    *pubsub.Topic
 	sub      *pubsub.Subscription
 	me       peer.ID
-	done     chan struct{}
+	Input    chan string
 }
 
 // Subscribe tries to subscribe to the PubSub topic to initiate a connection,
@@ -42,6 +46,7 @@ func Subscribe(ctx context.Context, ps *pubsub.PubSub, meID peer.ID, topicName s
 		sub:      sub,
 		me:       meID,
 		Messages: make(chan *Message),
+		Input:    make(chan string),
 	}
 
 	// start reading messages from the subscription in a loop
@@ -51,6 +56,19 @@ func Subscribe(ctx context.Context, ps *pubsub.PubSub, meID peer.ID, topicName s
 
 func (conn *Connection) ListPeers() []peer.ID {
 	return conn.ps.ListPeers(conn.topic.String())
+}
+
+// Publish sends a message to peer.
+func (conn *Connection) Publish(message string) error {
+	m := Message{
+		Message: message,
+		Sender:  conn.me.String(),
+	}
+	msgBytes, err := json.Marshal(m)
+	if err != nil {
+		return err
+	}
+	return conn.topic.Publish(conn.ctx, msgBytes)
 }
 
 // fetchMessages pulls messages from the subscription connection
@@ -74,5 +92,47 @@ func (conn *Connection) fetchMessages() {
 		}
 		// send valid messages onto the connection Messages channel
 		conn.Messages <- m
+	}
+}
+
+func (conn *Connection) WriteMessage(io *bufio.Reader) {
+	for {
+		in, _ := io.ReadString('\n')
+		in = strings.TrimSuffix(in, "\n")
+		in = strings.Trim(in, " ")
+		conn.Input <- in
+	}
+}
+
+func (conn *Connection) ListenEvents() {
+	peerRefreshTicker := time.NewTicker(time.Second)
+	defer peerRefreshTicker.Stop()
+	peerList := map[string]string{}
+
+	for {
+		select {
+		case <-peerRefreshTicker.C:
+			peers := conn.ListPeers()
+			for _, peer := range peers {
+				p := peer.String()
+				if _, found := peerList[p]; !found {
+					peerList[p] = p
+					fmt.Println("New peer connected: ", p)
+				}
+			}
+
+		case m := <-conn.Messages:
+			// Display the message received on terminal
+			fmt.Println(m.Sender, " > ", m.Message)
+
+		case input := <-conn.Input:
+			// Publish local peer message
+			// Display the message on terminal
+			err := conn.Publish(input)
+			if err != nil {
+				fmt.Printf("publish error: %s", err)
+			}
+		}
+
 	}
 }

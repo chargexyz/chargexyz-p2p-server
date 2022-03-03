@@ -1,12 +1,13 @@
 package server
 
 import (
+	"bufio"
 	"context"
 	"crypto/ed25519"
 	"encoding/hex"
 	"flag"
 	"fmt"
-	"time"
+	"os"
 
 	"github.com/libp2p/go-libp2p"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -66,28 +67,13 @@ func Run() error {
 	fmt.Println("Local Peer ID", localPeerID)
 	fmt.Println("Listening on...", h.Addrs())
 
-	peerRefreshTicker := time.NewTicker(time.Second)
-	defer peerRefreshTicker.Stop()
-	peerList := map[string]string{}
+	reader := bufio.NewReader(os.Stdin)
 
-	for {
-		select {
-		case <-peerRefreshTicker.C:
-			peers := conn.ListPeers()
-			for _, peer := range peers {
-				p := peer.String()
-				if _, found := peerList[p]; !found {
-					peerList[p] = p
-					fmt.Println("New peer connected: ", p)
-				}
-			}
-		case m := <-conn.Messages:
-			// Log the message received
-			fmt.Println(m.Sender, "> ", m.Message)
-		}
+	//standard input for user message entry in terminal
+	go conn.WriteMessage(reader)
+	conn.ListenEvents()
 
-	}
-
+	return nil
 }
 
 // Generates ED25519 private key
