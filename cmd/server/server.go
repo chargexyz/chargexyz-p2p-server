@@ -1,13 +1,12 @@
 package server
 
 import (
-	"bufio"
 	"context"
 	"crypto/ed25519"
 	"encoding/hex"
 	"flag"
 	"fmt"
-	"os"
+	"time"
 
 	"github.com/libp2p/go-libp2p"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -60,17 +59,29 @@ func Run() error {
 	}
 
 	// subscribe to the topic
-	services.Subscribe(ctx, ps, localPeerID, common.TOPIC)
-
+	conn, err := services.Subscribe(ctx, ps, localPeerID, common.TOPIC)
+	if err != nil {
+		return err
+	}
 	fmt.Println("Local Peer ID", localPeerID)
 	fmt.Println("Listening on...", h.Addrs())
-	scanner := bufio.NewScanner(os.Stdin)
+
+	peerRefreshTicker := time.NewTicker(time.Second)
+	defer peerRefreshTicker.Stop()
+	peerList := map[string]string{}
 
 	for {
-		fmt.Print("Write Message: ")
-		scanner.Scan()
-		sendData := scanner.Text()
-		fmt.Println("msg> ", sendData)
+		select {
+		case <-peerRefreshTicker.C:
+			peers := conn.ListPeers()
+			for _, peer := range peers {
+				p := peer.String()
+				if _, found := peerList[p]; !found {
+					peerList[p] = p
+					fmt.Println("New peer connected: ", p)
+				}
+			}
+		}
 	}
 
 }
