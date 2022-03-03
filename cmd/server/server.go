@@ -81,7 +81,11 @@ func Run() error {
 					fmt.Println("New peer connected: ", p)
 				}
 			}
+		case m := <-conn.Messages:
+			// Log the message received
+			fmt.Println(m.Sender, "> ", m.Message)
 		}
+
 	}
 
 }
