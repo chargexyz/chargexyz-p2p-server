@@ -1,13 +1,11 @@
 package server
 
 import (
-	"bufio"
 	"context"
 	"crypto/ed25519"
 	"encoding/hex"
 	"flag"
 	"fmt"
-	"os"
 
 	"github.com/libp2p/go-libp2p"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -67,10 +65,8 @@ func Run() error {
 	fmt.Println("Local Peer ID", localPeerID)
 	fmt.Println("Listening on...", h.Addrs())
 
-	reader := bufio.NewReader(os.Stdin)
-
 	//standard input for user message entry in terminal
-	go conn.WriteMessage(reader)
+	go conn.WriteMessage()
 	conn.ListenEvents()
 
 	return nil

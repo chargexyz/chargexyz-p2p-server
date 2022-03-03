@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -95,7 +96,8 @@ func (conn *Connection) fetchMessages() {
 	}
 }
 
-func (conn *Connection) WriteMessage(io *bufio.Reader) {
+func (conn *Connection) WriteMessage() {
+	io := bufio.NewReader(os.Stdin)
 	for {
 		in, _ := io.ReadString('\n')
 		in = strings.TrimSuffix(in, "\n")
