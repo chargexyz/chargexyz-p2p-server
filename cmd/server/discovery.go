@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -31,7 +32,7 @@ func (n *discoveryNotifee) HandlePeerFound(pi peer.AddrInfo) {
 	if pi.ID.String() == localPeerID.String() {
 		return
 	}
-	fmt.Printf("discovered new peer %s\n", pi.ID.Pretty())
+	log.Println(fmt.Sprintf("discovered new peer %s\n", pi.ID.Pretty()))
 	err := n.h.Connect(context.Background(), pi)
 	if err != nil {
 		fmt.Printf("error connecting to peer %s: %s\n", pi.ID.Pretty(), err)
