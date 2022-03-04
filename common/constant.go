@@ -20,4 +20,7 @@ const (
 	Port       = "6379"
 	PubChannel = "IN"
 	SubChannel = "OUT"
+	// A ping is set to the server with this period to test for the health of
+	// the connection and server.
+	HealthCheckPeriod = time.Minute
 )

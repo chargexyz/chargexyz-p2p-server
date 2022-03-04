@@ -57,24 +57,27 @@ func Run() error {
 		return err
 	}
 
-	// subscribe to the topic
-	conn, err := services.Subscribe(ctx, ps, localPeerID, common.TOPIC)
+	// Connect to redis server
+	redis := services.NewRedisServer(common.Host, common.Port, common.PubChannel, common.SubChannel)
+	err = redis.Run(ctx)
 	if err != nil {
 		return err
 	}
+
+	// subscribe to the topic
+	conn, err := services.Subscribe(ctx, redis, ps, localPeerID, common.TOPIC)
+	if err != nil {
+		return err
+	}
+
 	fmt.Println("Local Peer ID", localPeerID)
 	fmt.Println("Listening on...", h.Addrs())
 
-	// Connect to redis server
-	redis := NewRedisServer(common.Host, common.Port, common.PubChannel, common.SubChannel)
-	err = redis.Run()
-	if err != nil {
-		return err
-	}
-
 	//standard input for user message entry in terminal
 	go conn.WriteMessage()
-	conn.ListenEvents()
+	if err := conn.ListenEvents(); err != nil {
+		return err
+	}
 
 	return nil
 }
