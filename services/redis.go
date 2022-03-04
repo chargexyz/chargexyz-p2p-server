@@ -9,8 +9,7 @@ import (
 
 type redisServer struct {
 	ctx        context.Context
-	host       string
-	port       string
+	address    string
 	pubChannel string
 	subChannel string
 	subConn    *redis.PubSubConn
@@ -18,16 +17,14 @@ type redisServer struct {
 }
 
 func NewRedisServer(host, port, pubChannel, subChannel string) *redisServer {
-	return &redisServer{nil, host, port, pubChannel, subChannel, nil, nil}
+	redisServerAddr := fmt.Sprintf("%s:%s", host, port)
+	return &redisServer{nil, redisServerAddr, pubChannel, subChannel, nil, nil}
 }
 
 func (rs *redisServer) Run(ctx context.Context) error {
 
-	redisServerAddr := fmt.Sprintf("%s:%s", rs.host, rs.port)
-
-	fmt.Println("...Connecting to redis on ", redisServerAddr)
-
-	conn, err := redis.Dial("tcp", redisServerAddr)
+	fmt.Println("...Connecting to redis on ", rs.address)
+	conn, err := rs.dial()
 
 	if err != nil {
 		return err
@@ -84,4 +81,30 @@ func (rs *redisServer) Unsubscribe() error {
 	}()
 
 	return nil
+}
+
+func (rs *redisServer) Publish(msg string) error {
+	fmt.Printf("...publishing message to redis %s channel on %s\n", rs.pubChannel, rs.address)
+	conn, err := rs.dial()
+
+	if err != nil {
+		return err
+	}
+	_, err = conn.Do("PUBLISH", rs.pubChannel, msg)
+	if err != nil {
+		return err
+	}
+	fmt.Println("Message published!")
+	return nil
+}
+
+func (rs *redisServer) dial() (redis.Conn, error) {
+
+	conn, err := redis.Dial("tcp", rs.address)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return conn, nil
 }
