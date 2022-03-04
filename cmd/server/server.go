@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"flag"
 	"fmt"
-	"time"
 
 	"github.com/libp2p/go-libp2p"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -66,24 +65,11 @@ func Run() error {
 	fmt.Println("Local Peer ID", localPeerID)
 	fmt.Println("Listening on...", h.Addrs())
 
-	peerRefreshTicker := time.NewTicker(time.Second)
-	defer peerRefreshTicker.Stop()
-	peerList := map[string]string{}
+	//standard input for user message entry in terminal
+	go conn.WriteMessage()
+	conn.ListenEvents()
 
-	for {
-		select {
-		case <-peerRefreshTicker.C:
-			peers := conn.ListPeers()
-			for _, peer := range peers {
-				p := peer.String()
-				if _, found := peerList[p]; !found {
-					peerList[p] = p
-					fmt.Println("New peer connected: ", p)
-				}
-			}
-		}
-	}
-
+	return nil
 }
 
 // Generates ED25519 private key
