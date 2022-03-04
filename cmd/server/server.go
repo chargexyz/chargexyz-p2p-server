@@ -65,6 +65,13 @@ func Run() error {
 	fmt.Println("Local Peer ID", localPeerID)
 	fmt.Println("Listening on...", h.Addrs())
 
+	// Connect to redis server
+	redis := NewRedisServer(common.Host, common.Port, common.PubChannel, common.SubChannel)
+	err = redis.Run()
+	if err != nil {
+		return err
+	}
+
 	//standard input for user message entry in terminal
 	go conn.WriteMessage()
 	conn.ListenEvents()
