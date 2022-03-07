@@ -83,13 +83,14 @@ func (rs *redisServer) Unsubscribe() error {
 	return nil
 }
 
-func (rs *redisServer) Publish(msg string) error {
+func (rs *redisServer) Publish(msg []byte) error {
 	fmt.Printf("...publishing message to redis %s channel on %s\n", rs.pubChannel, rs.address)
 	conn, err := rs.dial()
 
 	if err != nil {
 		return err
 	}
+
 	_, err = conn.Do("PUBLISH", rs.pubChannel, msg)
 	if err != nil {
 		return err

@@ -73,8 +73,6 @@ func Run() error {
 	fmt.Println("Local Peer ID", localPeerID)
 	fmt.Println("Listening on...", h.Addrs())
 
-	//standard input for user message entry in terminal
-	go conn.WriteMessage()
 	if err := conn.ListenEvents(); err != nil {
 		return err
 	}
