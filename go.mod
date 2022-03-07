@@ -110,6 +110,8 @@ require (
 )
 
 require (
+	github.com/garyburd/redigo v1.6.3
+	github.com/gomodule/redigo v1.8.8 // indirect
 	github.com/google/go-cmp v0.5.6 // indirect
 	github.com/kr/pretty v0.3.0 // indirect
 	github.com/libp2p/zeroconf/v2 v2.1.1 // indirect

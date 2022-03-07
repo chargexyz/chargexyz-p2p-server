@@ -21,13 +21,14 @@ type Connection struct {
 	ps       *pubsub.PubSub
 	topic    *pubsub.Topic
 	sub      *pubsub.Subscription
+	redis    *redisServer
 	me       peer.ID
-	Input    chan string
+	input    chan string
 }
 
 // Subscribe tries to subscribe to the PubSub topic to initiate a connection,
 // Connection is returned on success.
-func Subscribe(ctx context.Context, ps *pubsub.PubSub, meID peer.ID, topicName string) (*Connection, error) {
+func Subscribe(ctx context.Context, redis *redisServer, ps *pubsub.PubSub, meID peer.ID, topicName string) (*Connection, error) {
 	// join the pubsub topic
 	topic, err := ps.Join(topicName)
 	if err != nil {
@@ -43,11 +44,12 @@ func Subscribe(ctx context.Context, ps *pubsub.PubSub, meID peer.ID, topicName s
 	conn := &Connection{
 		ctx:      ctx,
 		ps:       ps,
+		redis:    redis,
 		topic:    topic,
 		sub:      sub,
 		me:       meID,
 		Messages: make(chan *Message),
-		Input:    make(chan string),
+		input:    make(chan string),
 	}
 
 	// start reading messages from the subscription in a loop
@@ -102,15 +104,16 @@ func (conn *Connection) WriteMessage() {
 		in, _ := io.ReadString('\n')
 		in = strings.TrimSuffix(in, "\n")
 		in = strings.Trim(in, " ")
-		conn.Input <- in
+		conn.input <- in
 	}
 }
 
-func (conn *Connection) ListenEvents() {
+func (conn *Connection) ListenEvents() error {
 	peerRefreshTicker := time.NewTicker(time.Second)
 	defer peerRefreshTicker.Stop()
 	peerList := map[string]string{}
 
+ev:
 	for {
 		select {
 		case <-peerRefreshTicker.C:
@@ -127,14 +130,23 @@ func (conn *Connection) ListenEvents() {
 			// Display the message received on terminal
 			fmt.Println(m.Sender, " > ", m.Message)
 
-		case input := <-conn.Input:
+			// publish to redis channel
+			conn.redis.Publish(m.Message)
+
+		case input := <-conn.input:
 			// Publish local peer message
 			// Display the message on terminal
 			err := conn.Publish(input)
 			if err != nil {
 				fmt.Printf("publish error: %s", err)
 			}
+		case <-conn.redis.ctx.Done():
+			break ev
+		case err := <-conn.redis.done:
+			// Return error from the receive goroutine.
+			return err
 		}
-
 	}
+
+	return nil
 }
