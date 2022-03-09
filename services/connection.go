@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -84,13 +85,13 @@ func (conn *Connection) fetchEvents() {
 			continue
 		}
 
-		m := new(message.Event)
-		err = json.Unmarshal(msg.Data, m)
+		ev, err := decode(msg.Data)
 		if err != nil {
+			fmt.Println("Error occurred while parsing protobuf:: ", err)
 			continue
 		}
 		// send valid events onto the connection Events channel
-		conn.Events <- m
+		conn.Events <- ev
 	}
 }
 
@@ -101,6 +102,20 @@ func (conn *Connection) ListenEvents() error {
 
 ev:
 	for {
+		// evn := message.Event{
+		// 	EventId: message.EventType_CHARGING_STATUS,
+		// 	Data: &message.Event_ChargingStatusData{
+		// 		&message.ChargingStatusData{
+		// 			Progress: 20.00,
+		// 		},
+		// 	},
+		// }
+
+		// b, _ := encode(&evn)
+		// fmt.Println("EVVV BYTE: ", b)
+
+		// conn.redis.Publish(b)
+
 		select {
 		case <-peerRefreshTicker.C:
 			peers := conn.ListPeers()
@@ -114,9 +129,10 @@ ev:
 
 		case e := <-conn.Events:
 			// Display the event received on terminal
-			fmt.Println("Event:: ", e)
+			fmt.Println("Event ID:: ", e.EventId)
+			fmt.Println("Event Data:: ", e.Data)
 
-			bev, err := encode(e)
+			bev, err := encodeToHex(e)
 			if err != nil {
 				fmt.Println("Error occurred while publishing to redis:: ", err.Error())
 				continue
@@ -144,7 +160,6 @@ ev:
 }
 
 func encode(ev *message.Event) ([]byte, error) {
-
 	encoded, err := proto.Marshal(ev)
 
 	if err != nil {
@@ -155,7 +170,6 @@ func encode(ev *message.Event) ([]byte, error) {
 }
 
 func decode(bt []byte) (*message.Event, error) {
-
 	var ev message.Event
 
 	err := proto.Unmarshal(bt, &ev)
@@ -165,4 +179,38 @@ func decode(bt []byte) (*message.Event, error) {
 	}
 
 	return &ev, nil
+}
+
+// encodeToHex is used when sending event to redis
+func encodeToHex(ev *message.Event) (string, error) {
+
+	encoded, err := encode(ev)
+	if err != nil {
+		return "", err
+	}
+	// Encode the byte to hex string
+	encodedString := hex.EncodeToString(encoded)
+
+	return encodedString, nil
+}
+
+// decodeFromHex is used when reading redis event
+func decodeFromHex(bt []byte) (*message.Event, error) {
+
+	// convert the byte to hexstring
+	hexString := string(bt)
+
+	// decode the hex string to byte slice
+	bytt, err := hex.DecodeString(hexString)
+	if err != nil {
+		return nil, err
+	}
+
+	// decode to Event
+	ev, err := decode(bytt)
+	if err != nil {
+		return nil, err
+	}
+
+	return ev, nil
 }

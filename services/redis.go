@@ -60,6 +60,9 @@ func (rs *redisServer) listenEvents() {
 			return
 		case redis.Message:
 			fmt.Println("message received from redis: ", n.Data)
+			dd, err := decodeFromHex(n.Data)
+			fmt.Println("bytedd: ", dd)
+			fmt.Println("bytedd Err: ", err)
 
 		case redis.Subscription:
 			fmt.Printf("Subcribed to Redis %s channel!\n", n.Channel)
@@ -83,7 +86,7 @@ func (rs *redisServer) Unsubscribe() error {
 	return nil
 }
 
-func (rs *redisServer) Publish(msg []byte) error {
+func (rs *redisServer) Publish(msg string) error {
 	fmt.Printf("...publishing message to redis %s channel on %s\n", rs.pubChannel, rs.address)
 	conn, err := rs.dial()
 
