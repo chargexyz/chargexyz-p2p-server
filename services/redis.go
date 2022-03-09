@@ -14,11 +14,12 @@ type redisServer struct {
 	subChannel string
 	subConn    *redis.PubSubConn
 	done       chan error
+	input      chan []byte
 }
 
 func NewRedisServer(host, port, pubChannel, subChannel string) *redisServer {
 	redisServerAddr := fmt.Sprintf("%s:%s", host, port)
-	return &redisServer{nil, redisServerAddr, pubChannel, subChannel, nil, nil}
+	return &redisServer{nil, redisServerAddr, pubChannel, subChannel, nil, nil, make(chan []byte)}
 }
 
 func (rs *redisServer) Run(ctx context.Context) error {
@@ -60,6 +61,7 @@ func (rs *redisServer) listenEvents() {
 			return
 		case redis.Message:
 			fmt.Println("message received from redis: ", n.Data)
+			rs.input <- n.Data
 
 		case redis.Subscription:
 			fmt.Printf("Subcribed to Redis %s channel!\n", n.Channel)
@@ -90,6 +92,7 @@ func (rs *redisServer) Publish(msg string) error {
 	if err != nil {
 		return err
 	}
+
 	_, err = conn.Do("PUBLISH", rs.pubChannel, msg)
 	if err != nil {
 		return err

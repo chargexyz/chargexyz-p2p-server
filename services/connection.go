@@ -1,29 +1,27 @@
 package services
 
 import (
-	"bufio"
 	"context"
-	"encoding/json"
+	"encoding/hex"
 	"fmt"
-	"os"
-	"strings"
 	"time"
 
+	"github.com/golang/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	"github.com/peaqnetwork/peaq-network-ev-charging-message-format/golang/message"
 )
 
 // Connection holds the live communication between peers
-// Messages are sent to/from peers
+// Events are sent to/from peers
 type Connection struct {
-	Messages chan *Message
-	ctx      context.Context
-	ps       *pubsub.PubSub
-	topic    *pubsub.Topic
-	sub      *pubsub.Subscription
-	redis    *redisServer
-	me       peer.ID
-	input    chan string
+	Events chan *message.Event
+	ctx    context.Context
+	ps     *pubsub.PubSub
+	topic  *pubsub.Topic
+	sub    *pubsub.Subscription
+	redis  *redisServer
+	me     peer.ID
 }
 
 // Subscribe tries to subscribe to the PubSub topic to initiate a connection,
@@ -42,18 +40,17 @@ func Subscribe(ctx context.Context, redis *redisServer, ps *pubsub.PubSub, meID 
 	}
 
 	conn := &Connection{
-		ctx:      ctx,
-		ps:       ps,
-		redis:    redis,
-		topic:    topic,
-		sub:      sub,
-		me:       meID,
-		Messages: make(chan *Message),
-		input:    make(chan string),
+		ctx:    ctx,
+		ps:     ps,
+		redis:  redis,
+		topic:  topic,
+		sub:    sub,
+		me:     meID,
+		Events: make(chan *message.Event),
 	}
 
-	// start reading messages from the subscription in a loop
-	go conn.fetchMessages()
+	// start reading events from the subscription in a loop
+	go conn.fetchEvents()
 	return conn, nil
 }
 
@@ -61,50 +58,40 @@ func (conn *Connection) ListPeers() []peer.ID {
 	return conn.ps.ListPeers(conn.topic.String())
 }
 
-// Publish sends a message to peer.
-func (conn *Connection) Publish(message string) error {
-	m := Message{
-		Message: message,
-		Sender:  conn.me.String(),
-	}
-	msgBytes, err := json.Marshal(m)
+// Publish sends a event to peer.
+func (conn *Connection) Publish(ev *message.Event) error {
+
+	fmt.Println("Publish Event ", ev)
+
+	msgBytes, err := encode(ev)
 	if err != nil {
 		return err
 	}
+	fmt.Println("Publish Event bytes ", msgBytes)
 	return conn.topic.Publish(conn.ctx, msgBytes)
 }
 
-// fetchMessages pulls messages from the subscription connection
-// and pushes them onto the Messages channel.
-func (conn *Connection) fetchMessages() {
+// fetchEvents pulls events from the subscription connection
+// and pushes them onto the Events channel.
+func (conn *Connection) fetchEvents() {
 	for {
 		msg, err := conn.sub.Next(conn.ctx)
 		if err != nil {
-			close(conn.Messages)
+			close(conn.Events)
 			return
 		}
-		// prevent local peer from sending messages itself
+		// prevent local peer from sending events itself
 		if msg.ReceivedFrom.String() == conn.me.String() {
 			continue
 		}
 
-		m := new(Message)
-		err = json.Unmarshal(msg.Data, m)
+		ev, err := decode(msg.Data)
 		if err != nil {
+			fmt.Println("Error occurred while parsing protobuf:: ", err)
 			continue
 		}
-		// send valid messages onto the connection Messages channel
-		conn.Messages <- m
-	}
-}
-
-func (conn *Connection) WriteMessage() {
-	io := bufio.NewReader(os.Stdin)
-	for {
-		in, _ := io.ReadString('\n')
-		in = strings.TrimSuffix(in, "\n")
-		in = strings.Trim(in, " ")
-		conn.input <- in
+		// send valid events onto the connection Events channel
+		conn.Events <- ev
 	}
 }
 
@@ -126,17 +113,28 @@ ev:
 				}
 			}
 
-		case m := <-conn.Messages:
-			// Display the message received on terminal
-			fmt.Println(m.Sender, " > ", m.Message)
+		case e := <-conn.Events:
+			// Display the event received on terminal
+			fmt.Println("Event ID:: ", e.EventId)
+			fmt.Println("Event Data:: ", e.Data)
+
+			evHexString, err := encodeToHex(e)
+			if err != nil {
+				fmt.Println("Error occurred while publishing to redis:: ", err.Error())
+				continue
+			}
 
 			// publish to redis channel
-			conn.redis.Publish(m.Message)
+			conn.redis.Publish(evHexString)
 
-		case input := <-conn.input:
-			// Publish local peer message
-			// Display the message on terminal
-			err := conn.Publish(input)
+		case input := <-conn.redis.input:
+			// Publish redis event to peer
+			ev, err := decodeFromHex(input)
+			if err != nil {
+				fmt.Printf("error decode redis hex string. error: %s", err)
+			}
+
+			err = conn.Publish(ev)
 			if err != nil {
 				fmt.Printf("publish error: %s", err)
 			}
@@ -149,4 +147,60 @@ ev:
 	}
 
 	return nil
+}
+
+func encode(ev *message.Event) ([]byte, error) {
+	encoded, err := proto.Marshal(ev)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return encoded, nil
+}
+
+func decode(bt []byte) (*message.Event, error) {
+	var ev message.Event
+
+	err := proto.Unmarshal(bt, &ev)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &ev, nil
+}
+
+// encodeToHex is used when sending event to redis
+func encodeToHex(ev *message.Event) (string, error) {
+
+	encoded, err := encode(ev)
+	if err != nil {
+		return "", err
+	}
+	// Encode the byte to hex string
+	encodedString := hex.EncodeToString(encoded)
+
+	return encodedString, nil
+}
+
+// decodeFromHex is used when reading redis event
+func decodeFromHex(bt []byte) (*message.Event, error) {
+
+	// convert the byte to hexstring
+	hexString := string(bt)
+
+	// decode the hex string to byte slice
+	bytt, err := hex.DecodeString(hexString)
+	if err != nil {
+		return nil, err
+	}
+
+	// decode to Event
+	ev, err := decode(bytt)
+	if err != nil {
+		return nil, err
+	}
+
+	return ev, nil
 }
