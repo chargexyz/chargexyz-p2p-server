@@ -3,7 +3,6 @@ package services
 import (
 	"context"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -23,7 +22,6 @@ type Connection struct {
 	sub    *pubsub.Subscription
 	redis  *redisServer
 	me     peer.ID
-	input  chan string
 }
 
 // Subscribe tries to subscribe to the PubSub topic to initiate a connection,
@@ -49,7 +47,6 @@ func Subscribe(ctx context.Context, redis *redisServer, ps *pubsub.PubSub, meID 
 		sub:    sub,
 		me:     meID,
 		Events: make(chan *message.Event),
-		input:  make(chan string),
 	}
 
 	// start reading events from the subscription in a loop
@@ -62,12 +59,15 @@ func (conn *Connection) ListPeers() []peer.ID {
 }
 
 // Publish sends a event to peer.
-func (conn *Connection) Publish(event string) error {
+func (conn *Connection) Publish(ev *message.Event) error {
 
-	msgBytes, err := json.Marshal([]byte(event))
+	fmt.Println("Publish Event ", ev)
+
+	msgBytes, err := encode(ev)
 	if err != nil {
 		return err
 	}
+	fmt.Println("Publish Event bytes ", msgBytes)
 	return conn.topic.Publish(conn.ctx, msgBytes)
 }
 
@@ -102,20 +102,6 @@ func (conn *Connection) ListenEvents() error {
 
 ev:
 	for {
-		// evn := message.Event{
-		// 	EventId: message.EventType_CHARGING_STATUS,
-		// 	Data: &message.Event_ChargingStatusData{
-		// 		&message.ChargingStatusData{
-		// 			Progress: 20.00,
-		// 		},
-		// 	},
-		// }
-
-		// b, _ := encode(&evn)
-		// fmt.Println("EVVV BYTE: ", b)
-
-		// conn.redis.Publish(b)
-
 		select {
 		case <-peerRefreshTicker.C:
 			peers := conn.ListPeers()
@@ -132,19 +118,23 @@ ev:
 			fmt.Println("Event ID:: ", e.EventId)
 			fmt.Println("Event Data:: ", e.Data)
 
-			bev, err := encodeToHex(e)
+			evHexString, err := encodeToHex(e)
 			if err != nil {
 				fmt.Println("Error occurred while publishing to redis:: ", err.Error())
 				continue
 			}
 
 			// publish to redis channel
-			conn.redis.Publish(bev)
+			conn.redis.Publish(evHexString)
 
-		case input := <-conn.input:
-			// Publish local peer event
-			// Display the event on terminal
-			err := conn.Publish(input)
+		case input := <-conn.redis.input:
+			// Publish redis event to peer
+			ev, err := decodeFromHex(input)
+			if err != nil {
+				fmt.Printf("error decode redis hex string. error: %s", err)
+			}
+
+			err = conn.Publish(ev)
 			if err != nil {
 				fmt.Printf("publish error: %s", err)
 			}
