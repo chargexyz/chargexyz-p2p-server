@@ -29,7 +29,7 @@ func Run() error {
 	port := *portFlag
 	sk := *skFlag
 
-	prvKey, err := generatePrivateKey(sk)
+	prvKey, signkey, err := generatePrivateKey(sk)
 	if err != nil {
 		return err
 	}
@@ -65,7 +65,7 @@ func Run() error {
 	}
 
 	// subscribe to the topic
-	conn, err := services.Subscribe(ctx, redis, ps, localPeerID, common.TOPIC)
+	conn, err := services.Subscribe(ctx, redis, ps, localPeerID, common.TOPIC, signkey)
 	if err != nil {
 		return err
 	}
@@ -81,17 +81,18 @@ func Run() error {
 }
 
 // Generates ED25519 private key
-func generatePrivateKey(sk string) (crypto.PrivKey, error) {
+func generatePrivateKey(sk string) (crypto.PrivKey, ed25519.PrivateKey, error) {
 	seed, err := hex.DecodeString(sk)
 	if err != nil {
-		return nil, fmt.Errorf("unable to parse provided secret key: %s", err.Error())
+		return nil, nil, fmt.Errorf("unable to parse provided secret key: %s", err.Error())
 	}
 
 	key := ed25519.NewKeyFromSeed(seed)
+
 	prvKey, err := crypto.UnmarshalEd25519PrivateKey(key)
 	if err != nil {
-		return prvKey, fmt.Errorf("unable to parse provided secret key: %s", err.Error())
+		return prvKey, key, fmt.Errorf("unable to parse provided secret key: %s", err.Error())
 	}
 
-	return prvKey, nil
+	return prvKey, key, nil
 }
