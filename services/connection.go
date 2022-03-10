@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"crypto/ed25519"
 	"encoding/hex"
 	"fmt"
 	"time"
@@ -22,11 +23,12 @@ type Connection struct {
 	sub    *pubsub.Subscription
 	redis  *redisServer
 	me     peer.ID
+	sk     ed25519.PrivateKey
 }
 
 // Subscribe tries to subscribe to the PubSub topic to initiate a connection,
 // Connection is returned on success.
-func Subscribe(ctx context.Context, redis *redisServer, ps *pubsub.PubSub, meID peer.ID, topicName string) (*Connection, error) {
+func Subscribe(ctx context.Context, redis *redisServer, ps *pubsub.PubSub, meID peer.ID, topicName string, signKey ed25519.PrivateKey) (*Connection, error) {
 	// join the pubsub topic
 	topic, err := ps.Join(topicName)
 	if err != nil {
@@ -47,6 +49,7 @@ func Subscribe(ctx context.Context, redis *redisServer, ps *pubsub.PubSub, meID 
 		sub:    sub,
 		me:     meID,
 		Events: make(chan *message.Event),
+		sk:     signKey,
 	}
 
 	// start reading events from the subscription in a loop
@@ -118,6 +121,11 @@ ev:
 			fmt.Println("Event ID:: ", e.EventId)
 			fmt.Println("Event Data:: ", e.Data)
 
+			if e.EventId == message.EventType_IDENTITY_CHALLENGE {
+				conn.parseIdentityChallenge(e)
+				continue
+			}
+
 			evHexString, err := encodeToHex(e)
 			if err != nil {
 				fmt.Println("Error occurred while publishing to redis:: ", err.Error())
@@ -147,6 +155,30 @@ ev:
 	}
 
 	return nil
+}
+
+// parseIdentityChallenge - takes the plain data sent by consumer and sign it with private key
+func (conn *Connection) parseIdentityChallenge(ev *message.Event) {
+	plainData := ev.GetIdentityChallengeData().PlainData
+	hsh := ed25519.Sign(conn.sk, []byte(plainData))
+	encodedString := hex.EncodeToString(hsh)
+
+	fmt.Println("Encoded hsh:: ", encodedString)
+	response := message.Event{
+		EventId: message.EventType_IDENTITY_RESPONSE,
+		Data: &message.Event_IdentityResponseData{
+			IdentityResponseData: &message.IdentityResponseData{
+				Resp: &message.Response{
+					Error:   false,
+					Message: "success",
+				},
+				Signature: encodedString,
+			},
+		},
+	}
+
+	conn.Publish(&response)
+
 }
 
 func encode(ev *message.Event) ([]byte, error) {

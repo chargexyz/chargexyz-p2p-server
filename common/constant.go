@@ -1,6 +1,8 @@
 package common
 
-import "time"
+import (
+	"time"
+)
 
 const (
 	// ConnectionBufSize is the number of incoming messages to buffer.
