@@ -11,6 +11,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/peaqnetwork/peaq-network-ev-charging-message-format/golang/message"
+	"github.com/peaqnetwork/peaq-network-ev-charging-sim-be-p2p/common"
 )
 
 // Connection holds the live communication between peers
@@ -64,13 +65,12 @@ func (conn *Connection) ListPeers() []peer.ID {
 // Publish sends a event to peer.
 func (conn *Connection) Publish(ev *message.Event) error {
 
-	fmt.Println("Publish Event ", ev)
+	fmt.Println("\n Publish Event ", ev)
 
 	msgBytes, err := encode(ev)
 	if err != nil {
 		return err
 	}
-	fmt.Println("Publish Event bytes ", msgBytes)
 	return conn.topic.Publish(conn.ctx, msgBytes)
 }
 
@@ -90,7 +90,7 @@ func (conn *Connection) fetchEvents() {
 
 		ev, err := decode(msg.Data)
 		if err != nil {
-			fmt.Println("Error occurred while parsing protobuf:: ", err)
+			fmt.Println("\nError occurred while parsing protobuf:: ", err)
 			continue
 		}
 		// send valid events onto the connection Events channel
@@ -121,6 +121,12 @@ ev:
 			fmt.Println("Event ID:: ", e.EventId)
 			fmt.Println("Event Data:: ", e.Data)
 
+			// ignore event if it's not in permitted peer send events
+			if _, found := common.EventsPeerCanSend[e.EventId]; !found {
+				fmt.Printf("\nPeer is not permitted to send this event:: %s \n", e.EventId)
+				continue
+			}
+
 			if e.EventId == message.EventType_IDENTITY_CHALLENGE {
 				conn.parseIdentityChallenge(e)
 				continue
@@ -128,7 +134,7 @@ ev:
 
 			evHexString, err := encodeToHex(e)
 			if err != nil {
-				fmt.Println("Error occurred while publishing to redis:: ", err.Error())
+				fmt.Println("\nError occurred while publishing to redis:: ", err.Error())
 				continue
 			}
 
@@ -139,12 +145,18 @@ ev:
 			// Publish redis event to peer
 			ev, err := decodeFromHex(input)
 			if err != nil {
-				fmt.Printf("error decode redis hex string. error: %s", err)
+				fmt.Printf("\nerror decode redis hex string. error: %s \n", err)
+			}
+
+			// ignore event if it's not in permitted peer receive events
+			if _, found := common.EventsPeerCanReceive[ev.EventId]; !found {
+				fmt.Printf("\nPeer is not permitted to receive this event:: %s \n", ev.EventId)
+				continue
 			}
 
 			err = conn.Publish(ev)
 			if err != nil {
-				fmt.Printf("publish error: %s", err)
+				fmt.Printf("\n publish error: %s \n", err)
 			}
 		case <-conn.redis.ctx.Done():
 			break ev
@@ -163,7 +175,6 @@ func (conn *Connection) parseIdentityChallenge(ev *message.Event) {
 	hsh := ed25519.Sign(conn.sk, []byte(plainData))
 	encodedString := hex.EncodeToString(hsh)
 
-	fmt.Println("Encoded hsh:: ", encodedString)
 	response := message.Event{
 		EventId: message.EventType_IDENTITY_RESPONSE,
 		Data: &message.Event_IdentityResponseData{
