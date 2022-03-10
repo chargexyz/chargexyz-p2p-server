@@ -148,6 +148,12 @@ ev:
 				fmt.Printf("\nerror decode redis hex string. error: %s \n", err)
 			}
 
+			// ignore event if it's not in permitted peer receive events
+			if _, found := common.EventsPeerCanReceive[ev.EventId]; !found {
+				fmt.Printf("\nPeer is not permitted to receive this event:: %s \n", ev.EventId)
+				continue
+			}
+
 			err = conn.Publish(ev)
 			if err != nil {
 				fmt.Printf("\n publish error: %s \n", err)
