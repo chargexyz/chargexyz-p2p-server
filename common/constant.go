@@ -2,6 +2,8 @@ package common
 
 import (
 	"time"
+
+	"github.com/peaqnetwork/peaq-network-ev-charging-message-format/golang/message"
 )
 
 const (
@@ -25,4 +27,12 @@ const (
 	// A ping is set to the server with this period to test for the health of
 	// the connection and server.
 	HealthCheckPeriod = time.Minute
+)
+
+var (
+	EventsPeerCanSend = map[message.EventType]struct{}{
+		message.EventType_IDENTITY_CHALLENGE: {},
+		message.EventType_SERVICE_REQUESTED:  {},
+		message.EventType_STOP_CHARGE:        {},
+	}
 )
