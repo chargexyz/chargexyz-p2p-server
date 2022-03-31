@@ -172,7 +172,12 @@ ev:
 // parseIdentityChallenge - takes the plain data sent by consumer and sign it with private key
 func (conn *Connection) parseIdentityChallenge(ev *message.Event) {
 	plainData := ev.GetIdentityChallengeData().PlainData
-	hsh := ed25519.Sign(conn.sk, []byte(plainData))
+	plainDataByte, err := hex.DecodeString(plainData)
+	if err != nil {
+		fmt.Println("\n invalid plain data hex string")
+		return
+	}
+	hsh := ed25519.Sign(conn.sk, plainDataByte)
 	encodedString := hex.EncodeToString(hsh)
 
 	response := message.Event{
