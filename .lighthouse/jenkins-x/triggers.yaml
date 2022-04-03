@@ -1,7 +1,13 @@
 apiVersion: config.lighthouse.jenkins-x.io/v1alpha1
 kind: TriggerConfig
 spec:
-  
+  presubmits:
+  - name: pr
+    context: "pr"
+    always_run: false
+    optional: false
+    source: "pullrequest.yaml"
+    ignore_changes: "OWNERS"
   postsubmits:
   - name: devbranch
     context: "devbranch"
@@ -14,7 +20,6 @@ spec:
     source: "release.yaml"
     ignore_changes: "OWNERS"
     branches:
-    - ^dev$
-    - ^ci/1201976550272266_add-into-jx-cluster$
+    - ^dev-testrelease$
     - ^main$
     - ^master$

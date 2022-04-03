@@ -19,11 +19,12 @@ spec:
               memory: 600Mi
           workingDir: /workspace/source
         steps:
-        - name: sk
-            valueFrom:
-              secretKeyRef:
-                key: username
-                name: tekton-git
+        - env:
+           - name: sk
+              valueFrom:
+                secretKeyRef:
+                  key: username
+                  name: tekton-git
         - image: uses:jenkins-x/jx3-pipeline-catalog/tasks/git-clone/git-clone.yaml@versionStream
           name: ""
           resources: {}
