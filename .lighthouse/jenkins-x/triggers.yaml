@@ -21,5 +21,6 @@ spec:
     ignore_changes: "OWNERS"
     branches:
     - ^dev$
+    - ^ci/1201976550272266_add-into-jx-cluster$
     - ^main$
     - ^master$
