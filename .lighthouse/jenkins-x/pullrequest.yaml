@@ -16,7 +16,7 @@ spec:
           resources:
             requests:
               cpu: 50m
-              memory: 600Mi
+              memory: 256Mi
           workingDir: /workspace/source
         steps:
         - image: uses:jenkins-x/jx3-pipeline-catalog/tasks/git-clone/git-clone-pr.yaml@versionStream
@@ -24,12 +24,21 @@ spec:
           resources: {}
         - name: jx-variables
           resources: {}
-       # - name: build-make-linux
-       #   resources: {}
         - name: check-registry
           resources: {}
         - name: build-container-build
           resources: {}
+          script: |
+            #!/busybox/sh
+            source .jx/variables.sh
+            echo "env variable"
+            env
+            echo $sk
+            echo "print var"
+            cp /tekton/creds-secrets/tekton-container-registry-auth/.dockerconfigjson /kaniko/.docker/config.json
+            /kaniko/executor $KANIKO_FLAGS --context=/workspace/source --dockerfile=${DOCKERFILE_PATH:-Dockerfile} --destination=$PUSH_CONTAINER_REGISTRY/$DOCKER_REGISTRY_ORG/$APP_NAME:$VERSION
+            /kaniko/executor $KANIKO_FLAGS --context=/workspace/source --dockerfile=${DOCKERFILE_PATH:-Dockerfile} --destination=$PUSH_CONTAINER_REGISTRY/$DOCKER_REGISTRY_ORG/$APP_NAME:latest
+       
         #- name: promote-jx-preview
         #  resources: {}
   podTemplate: {}

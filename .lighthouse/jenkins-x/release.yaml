@@ -15,8 +15,8 @@ spec:
           name: ""
           resources:
             requests:
-              cpu: 100m
-              memory: 256Mi
+              cpu: 200m
+              memory: 600Mi
           workingDir: /workspace/source
         steps:
         - name: sk
@@ -31,8 +31,6 @@ spec:
           resources: {}
         - name: jx-variables
           resources: {}
-        # - name: build-make-build
-        #   resources: {}
         - name: check-registry
           resources: {}
         - name: build-container-build
