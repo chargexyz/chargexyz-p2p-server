@@ -9,17 +9,11 @@ spec:
     source: "pullrequest.yaml"
     ignore_changes: "OWNERS"
   postsubmits:
-  - name: devbranch
-    context: "devbranch"
-    source: "devbranch.yaml"
-    ignore_changes: "OWNERS"
-    branches:
-    - ^dev$
   - name: release
     context: "release"
     source: "release.yaml"
     ignore_changes: "OWNERS"
     branches:
-    - ^dev-testrelease$
+    - ^dev$
     - ^main$
     - ^master$

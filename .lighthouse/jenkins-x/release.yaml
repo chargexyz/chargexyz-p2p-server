@@ -15,16 +15,10 @@ spec:
           name: ""
           resources:
             requests:
-              cpu: 200m
-              memory: 600Mi
+              cpu: 100m
+              memory: 256Mi
           workingDir: /workspace/source
         steps:
-        - env:
-           - name: sk
-              valueFrom:
-                secretKeyRef:
-                  key: username
-                  name: tekton-git
         - image: uses:jenkins-x/jx3-pipeline-catalog/tasks/git-clone/git-clone.yaml@versionStream
           name: ""
           resources: {}
@@ -39,12 +33,7 @@ spec:
           script: |
             #!/busybox/sh
             source .jx/variables.sh
-            echo "env variable"
-            env
-            echo $sk
-            echo "print var"
             cp /tekton/creds-secrets/tekton-container-registry-auth/.dockerconfigjson /kaniko/.docker/config.json
-            /kaniko/executor $KANIKO_FLAGS --context=/workspace/source --dockerfile=${DOCKERFILE_PATH:-Dockerfile} --destination=$PUSH_CONTAINER_REGISTRY/$DOCKER_REGISTRY_ORG/$APP_NAME:$VERSION
             /kaniko/executor $KANIKO_FLAGS --context=/workspace/source --dockerfile=${DOCKERFILE_PATH:-Dockerfile} --destination=$PUSH_CONTAINER_REGISTRY/$DOCKER_REGISTRY_ORG/$APP_NAME:latest
         - name: promote-changelog
           resources: {}
