@@ -19,7 +19,7 @@ COPY . .
 RUN cd cmd && CGO_ENABLED=0 GOOS=linux  go build -a -installsuffix cgo -o ../out/sim-be-p2p .
 
 # Run container
-FROM alpine:3.15.4
+FROM alpine:3.15.2
 
 RUN apk --no-cache add ca-certificates
 
