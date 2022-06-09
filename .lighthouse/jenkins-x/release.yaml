@@ -25,8 +25,8 @@ spec:
           resources: {}
         - name: jx-variables
           resources: {}
-        #- name: build-make-build
-        # resources: {}
+        - name: build-make-build
+          resources: {}
         - name: check-registry
           resources: {}
         - name: build-container-build
