@@ -3,7 +3,7 @@
 # Uses docker build cache
 # Only re-download changed dependencies 
 FROM golang:1.17-alpine as builder
-RUN apk update && apk upgrade && \
+RUN apk update && apk upgrade --no-cache --ignore alpine-baselayout && \
     apk add --no-cache git
 
 RUN mkdir /app
@@ -19,7 +19,7 @@ COPY . .
 RUN cd cmd && CGO_ENABLED=0 GOOS=linux  go build -a -installsuffix cgo -o ../out/sim-be-p2p .
 
 # Run container
-FROM alpine:latest
+FROM alpine:3.15.0
 
 RUN apk --no-cache add ca-certificates
 
