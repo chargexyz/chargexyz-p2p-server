@@ -4,13 +4,16 @@ spec:
   presubmits:
   - name: pr
     context: "pr"
-    always_run: true
+    always_run: false
     optional: false
     source: "pullrequest.yaml"
+    ignore_changes: "OWNERS"
   postsubmits:
   - name: release
     context: "release"
     source: "release.yaml"
+    ignore_changes: "OWNERS"
     branches:
+    - ^dev$
     - ^main$
     - ^master$
