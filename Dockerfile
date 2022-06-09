@@ -3,7 +3,7 @@
 # Uses docker build cache
 # Only re-download changed dependencies 
 FROM golang:1.17-alpine as builder
-RUN apk update && apk upgrade && \
+RUN apk update && apk upgrade --no-cache --ignore alpine-baselayout && \
     apk add --no-cache git
 
 RUN mkdir /app
