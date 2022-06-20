@@ -10,6 +10,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	"github.com/peaqnetwork/peaq-network-ev-charging-message-format/golang/events"
 	"github.com/peaqnetwork/peaq-network-ev-charging-message-format/golang/message"
 	"github.com/peaqnetwork/peaq-network-ev-charging-sim-be-p2p/common"
 )
@@ -17,7 +18,7 @@ import (
 // Connection holds the live communication between peers
 // Events are sent to/from peers
 type Connection struct {
-	Events chan *message.Event
+	Events chan *events.Event
 	ctx    context.Context
 	ps     *pubsub.PubSub
 	topic  *pubsub.Topic
@@ -49,7 +50,7 @@ func Subscribe(ctx context.Context, redis *redisServer, ps *pubsub.PubSub, meID 
 		topic:  topic,
 		sub:    sub,
 		me:     meID,
-		Events: make(chan *message.Event),
+		Events: make(chan *events.Event),
 		sk:     signKey,
 	}
 
@@ -63,7 +64,7 @@ func (conn *Connection) ListPeers() []peer.ID {
 }
 
 // Publish sends a event to peer.
-func (conn *Connection) Publish(ev *message.Event) error {
+func (conn *Connection) Publish(ev *events.Event) error {
 
 	fmt.Println("\n Publish Event ", ev)
 
@@ -127,7 +128,7 @@ ev:
 				continue
 			}
 
-			if e.EventId == message.EventType_IDENTITY_CHALLENGE {
+			if e.EventId == events.EventType_IDENTITY_CHALLENGE {
 				conn.parseIdentityChallenge(e)
 				continue
 			}
@@ -170,7 +171,7 @@ ev:
 }
 
 // parseIdentityChallenge - takes the plain data sent by consumer and sign it with private key
-func (conn *Connection) parseIdentityChallenge(ev *message.Event) {
+func (conn *Connection) parseIdentityChallenge(ev *events.Event) {
 	plainData := ev.GetIdentityChallengeData().PlainData
 	plainDataByte, err := hex.DecodeString(plainData)
 	if err != nil {
@@ -180,9 +181,9 @@ func (conn *Connection) parseIdentityChallenge(ev *message.Event) {
 	hsh := ed25519.Sign(conn.sk, plainDataByte)
 	encodedString := hex.EncodeToString(hsh)
 
-	response := message.Event{
-		EventId: message.EventType_IDENTITY_RESPONSE,
-		Data: &message.Event_IdentityResponseData{
+	response := events.Event{
+		EventId: events.EventType_IDENTITY_RESPONSE,
+		Data: &events.Event_IdentityResponseData{
 			IdentityResponseData: &message.IdentityResponseData{
 				Resp: &message.Response{
 					Error:   false,
@@ -197,7 +198,7 @@ func (conn *Connection) parseIdentityChallenge(ev *message.Event) {
 
 }
 
-func encode(ev *message.Event) ([]byte, error) {
+func encode(ev *events.Event) ([]byte, error) {
 	encoded, err := proto.Marshal(ev)
 
 	if err != nil {
@@ -207,8 +208,8 @@ func encode(ev *message.Event) ([]byte, error) {
 	return encoded, nil
 }
 
-func decode(bt []byte) (*message.Event, error) {
-	var ev message.Event
+func decode(bt []byte) (*events.Event, error) {
+	var ev events.Event
 
 	err := proto.Unmarshal(bt, &ev)
 
@@ -220,7 +221,7 @@ func decode(bt []byte) (*message.Event, error) {
 }
 
 // encodeToHex is used when sending event to redis
-func encodeToHex(ev *message.Event) (string, error) {
+func encodeToHex(ev *events.Event) (string, error) {
 
 	encoded, err := encode(ev)
 	if err != nil {
@@ -233,7 +234,7 @@ func encodeToHex(ev *message.Event) (string, error) {
 }
 
 // decodeFromHex is used when reading redis event
-func decodeFromHex(bt []byte) (*message.Event, error) {
+func decodeFromHex(bt []byte) (*events.Event, error) {
 
 	// convert the byte to hexstring
 	hexString := string(bt)
