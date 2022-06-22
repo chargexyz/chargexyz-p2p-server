@@ -3,7 +3,7 @@ package common
 import (
 	"time"
 
-	"github.com/peaqnetwork/peaq-network-ev-charging-message-format/golang/message"
+	"github.com/peaqnetwork/peaq-network-ev-charging-message-format/golang/events"
 )
 
 const (
@@ -30,18 +30,20 @@ const (
 )
 
 var (
-	EventsPeerCanSend = map[message.EventType]struct{}{
-		message.EventType_IDENTITY_CHALLENGE:   {},
-		message.EventType_SERVICE_REQUESTED:    {},
-		message.EventType_STOP_CHARGE:          {},
-		message.EventType_SERVICE_DELIVERY_ACK: {},
+	EventsPeerCanSend = map[events.EventType]struct{}{
+		events.EventType_IDENTITY_CHALLENGE:         {},
+		events.EventType_SERVICE_REQUESTED:          {},
+		events.EventType_STOP_CHARGE_REQUEST:        {},
+		events.EventType_SERVICE_DELIVERY_ACK:       {},
+		events.EventType_CHECK_AVAILABILITY_REQUEST: {},
 	}
 
-	EventsPeerCanReceive = map[message.EventType]struct{}{
-		message.EventType_CHARGING_STATUS:      {},
-		message.EventType_IDENTITY_RESPONSE:    {},
-		message.EventType_SERVICE_DELIVERED:    {},
-		message.EventType_SERVICE_REQUEST_ACK:  {},
-		message.EventType_STOP_CHARGE_RESPONSE: {},
+	EventsPeerCanReceive = map[events.EventType]struct{}{
+		events.EventType_CHARGING_STATUS:             {},
+		events.EventType_IDENTITY_RESPONSE:           {},
+		events.EventType_SERVICE_DELIVERED:           {},
+		events.EventType_SERVICE_REQUEST_ACK:         {},
+		events.EventType_STOP_CHARGE_RESPONSE:        {},
+		events.EventType_CHECK_AVAILABILITY_RESPONSE: {},
 	}
 )
