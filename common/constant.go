@@ -31,17 +31,19 @@ const (
 
 var (
 	EventsPeerCanSend = map[events.EventType]struct{}{
-		events.EventType_IDENTITY_CHALLENGE:   {},
-		events.EventType_SERVICE_REQUESTED:    {},
-		events.EventType_STOP_CHARGE_REQUEST:  {},
-		events.EventType_SERVICE_DELIVERY_ACK: {},
+		events.EventType_IDENTITY_CHALLENGE:         {},
+		events.EventType_SERVICE_REQUESTED:          {},
+		events.EventType_STOP_CHARGE_REQUEST:        {},
+		events.EventType_SERVICE_DELIVERY_ACK:       {},
+		events.EventType_CHECK_AVAILABILITY_REQUEST: {},
 	}
 
 	EventsPeerCanReceive = map[events.EventType]struct{}{
-		events.EventType_CHARGING_STATUS:      {},
-		events.EventType_IDENTITY_RESPONSE:    {},
-		events.EventType_SERVICE_DELIVERED:    {},
-		events.EventType_SERVICE_REQUEST_ACK:  {},
-		events.EventType_STOP_CHARGE_RESPONSE: {},
+		events.EventType_CHARGING_STATUS:             {},
+		events.EventType_IDENTITY_RESPONSE:           {},
+		events.EventType_SERVICE_DELIVERED:           {},
+		events.EventType_SERVICE_REQUEST_ACK:         {},
+		events.EventType_STOP_CHARGE_RESPONSE:        {},
+		events.EventType_CHECK_AVAILABILITY_RESPONSE: {},
 	}
 )
