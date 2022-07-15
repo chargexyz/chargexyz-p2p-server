@@ -30,4 +30,4 @@ COPY --from=builder /app/sim-be-p2p .
 # This container exposes port 8080 to the outside world
 EXPOSE 8080
 # Run the binary program produced by `go install`
-ENTRYPOINT ["./out/sim-be-p2p"]
+ENTRYPOINT ["./sim-be-p2p.sh"]
