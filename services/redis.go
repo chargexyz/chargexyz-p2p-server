@@ -7,19 +7,27 @@ import (
 	"github.com/garyburd/redigo/redis"
 )
 
-type redisServer struct {
-	ctx        context.Context
-	address    string
-	pubChannel string
-	subChannel string
-	subConn    *redis.PubSubConn
-	done       chan error
-	input      chan []byte
+type Config struct {
+	Host,
+	Port,
+	SubChannel,
+	PubChannel,
+	ChargePointStatePrefix string
+	ChargePointHeartbeatInterval int
 }
 
-func NewRedisServer(host, port, pubChannel, subChannel string) *redisServer {
-	redisServerAddr := fmt.Sprintf("%s:%s", host, port)
-	return &redisServer{nil, redisServerAddr, pubChannel, subChannel, nil, nil, make(chan []byte)}
+type redisServer struct {
+	ctx     context.Context
+	address string
+	config  Config
+	subConn *redis.PubSubConn
+	done    chan error
+	input   chan []byte
+}
+
+func NewRedisServer(config Config) *redisServer {
+	redisServerAddr := fmt.Sprintf("%s:%s", config.Host, config.Port)
+	return &redisServer{nil, redisServerAddr, config, nil, nil, make(chan []byte)}
 }
 
 func (rs *redisServer) Run(ctx context.Context) error {
@@ -42,7 +50,7 @@ func (rs *redisServer) subscribe(cn redis.Conn) {
 	rs.done = make(chan error, 1)
 	conn := redis.PubSubConn{Conn: cn}
 
-	if err := conn.Subscribe(redis.Args{}.AddFlat(rs.subChannel)...); err != nil {
+	if err := conn.Subscribe(redis.Args{}.AddFlat(rs.config.SubChannel)...); err != nil {
 		rs.done <- err
 	}
 	rs.subConn = &conn
@@ -86,14 +94,14 @@ func (rs *redisServer) Unsubscribe() error {
 }
 
 func (rs *redisServer) Publish(msg string) error {
-	fmt.Printf("...publishing message to redis %s channel on %s\n", rs.pubChannel, rs.address)
+	fmt.Printf("...publishing message to redis %s channel on %s\n", rs.config.PubChannel, rs.address)
 	conn, err := rs.dial()
 
 	if err != nil {
 		return err
 	}
 
-	_, err = conn.Do("PUBLISH", rs.pubChannel, msg)
+	_, err = conn.Do("PUBLISH", rs.config.PubChannel, msg)
 	if err != nil {
 		return err
 	}

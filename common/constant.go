@@ -19,11 +19,23 @@ const (
 	// Subscription topic
 	TOPIC = "charmev"
 
+	DefaultPort = "10333"
+
+	// ENV VARs
+	EnvPort              = "P2P_PORT"
+	EnvProviderSecretKey = "PROVIDER_SECRET_KEY"
+	EnvRedisHost         = "REDIS_HOST"
+	EnvRedisPort         = "REDIS_PORT"
+	EnvRedisPubChannel   = "REDIS_PUB_CHANNEL"
+	EnvRedisSubChannel   = "REDIS_SUB_CHANNEL"
+
 	// REDIS CONFIGS
-	Host       = "127.0.0.1"
-	Port       = "6379"
-	PubChannel = "IN"
-	SubChannel = "OUT"
+	DefaultRedisHost                      = "127.0.0.1"
+	DefualtRedisPort                      = "6379"
+	DefualtRedisPubChannel                = "IN"
+	DefualtRedisSubChannel                = "OUT"
+	DefualtRedisChargePointStateKeyPrefix = "CHARGE_POINT_STATE_"
+
 	// A ping is set to the server with this period to test for the health of
 	// the connection and server.
 	HealthCheckPeriod = time.Minute

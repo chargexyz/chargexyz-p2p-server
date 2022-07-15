@@ -121,4 +121,7 @@ require (
 	google.golang.org/grpc v1.44.0 // indirect
 )
 
-require github.com/peaqnetwork/peaq-network-ev-charging-message-format/golang v0.0.0-20220620132317-e4c6d9a7574e // indirect
+require (
+	github.com/peaqnetwork/peaq-network-ev-charging-message-format/golang v0.0.0-20220620132317-e4c6d9a7574e // indirect
+	github.com/sirupsen/logrus v1.8.1
+)

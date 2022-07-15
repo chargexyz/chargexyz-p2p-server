@@ -4,11 +4,12 @@ import (
 	"context"
 	"crypto/ed25519"
 	"encoding/hex"
-	"flag"
 	"fmt"
+	"os"
 
 	"github.com/libp2p/go-libp2p"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	"github.com/sirupsen/logrus"
 
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
@@ -21,13 +22,43 @@ var localPeerID peer.ID
 
 func Run() error {
 
-	// parse required flags
-	portFlag := flag.String("p", "0", "listening port")
-	skFlag := flag.String("sk", "", "Hex string of the provider secret key/seed")
-	flag.Parse()
+	sk := os.Getenv(common.EnvProviderSecretKey)
+	if len(sk) < 1 {
+		logrus.Panicln(common.EnvProviderSecretKey, " env var not set")
+	}
+	if len(sk) < 64 {
+		logrus.Panicln("invalid env var value: ", common.EnvProviderSecretKey)
+	}
 
-	port := *portFlag
-	sk := *skFlag
+	port := os.Getenv(common.EnvPort)
+	if len(port) < 1 {
+		logrus.Infof("%s env var not set. using default port: %v", common.EnvPort, common.DefaultPort)
+		port = common.DefaultPort
+	}
+
+	redisHost := os.Getenv(common.EnvRedisHost)
+	if len(redisHost) < 1 {
+		logrus.Infof("%s env var not set. using default redis host: %v", common.EnvRedisHost, common.DefaultRedisHost)
+		redisHost = common.DefaultRedisHost
+	}
+
+	redisPort := os.Getenv(common.EnvRedisPort)
+	if len(redisPort) < 1 {
+		logrus.Infof("%s env var not set. using default redis port: %v", common.EnvRedisPort, common.DefualtRedisPort)
+		redisPort = common.DefualtRedisPort
+	}
+
+	redisPubChannel := os.Getenv(common.EnvRedisPubChannel)
+	if len(redisPubChannel) < 1 {
+		logrus.Infof("%s env var not set. using default redis pub channel: %v", common.EnvRedisPubChannel, common.DefualtRedisPubChannel)
+		redisPubChannel = common.DefualtRedisPubChannel
+	}
+
+	redisSubChannel := os.Getenv(common.EnvRedisSubChannel)
+	if len(redisSubChannel) < 1 {
+		logrus.Infof("%s env var not set. using default redis sub channel: %v", common.EnvRedisSubChannel, common.DefualtRedisSubChannel)
+		redisSubChannel = common.DefualtRedisSubChannel
+	}
 
 	prvKey, signkey, err := generatePrivateKey(sk)
 	if err != nil {
@@ -58,7 +89,13 @@ func Run() error {
 	}
 
 	// Connect to redis server
-	redis := services.NewRedisServer(common.Host, common.Port, common.PubChannel, common.SubChannel)
+	config := services.Config{
+		Host:       redisHost,
+		Port:       redisPort,
+		PubChannel: redisPubChannel,
+		SubChannel: redisSubChannel,
+	}
+	redis := services.NewRedisServer(config)
 	err = redis.Run(ctx)
 	if err != nil {
 		return err
