@@ -9,6 +9,12 @@ spec:
     source: "pullrequest.yaml"
     ignore_changes: "OWNERS"
   postsubmits:
+  - name: demo
+    context: "demo"
+    source: "demo.yaml"
+    ignore_changes: "OWNERS"
+    branches:
+    - ^demo-p2p-server$
   - name: release
     context: "release"
     source: "release.yaml"
